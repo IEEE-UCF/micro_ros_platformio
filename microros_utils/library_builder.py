@@ -84,7 +84,22 @@ class Build:
         if (RMW_IMPLEMENTATION):
             os.environ['RMW_IMPLEMENTATION'] = "rmw_microxrcedds"
 
+        # Copy environment and make Python bytecode write safe for long/onedrive paths
         self.env = os.environ.copy()
+
+        # Avoid writing .pyc files into deep OneDrive/project paths which may fail
+        # Use PYTHONDONTWRITEBYTECODE to disable .pyc writes, and also set
+        # PYTHONPYCACHEPREFIX to a short build-local folder so tools that still
+        # expect a cache directory will use it.
+        try:
+            pycache_dir = os.path.abspath(os.path.join(self.build_folder, 'pycache'))
+            os.makedirs(pycache_dir, exist_ok=True)
+            # Prefer redirecting pycache, but also set don't write bytecode as a fallback
+            self.env['PYTHONPYCACHEPREFIX'] = pycache_dir
+            self.env['PYTHONDONTWRITEBYTECODE'] = '1'
+        except Exception:
+            # If anything fails here, we still continue with the copied env
+            pass
 
     def download_dev_environment(self):
         os.makedirs(self.dev_src_folder, exist_ok=True)
