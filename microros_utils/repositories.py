@@ -28,14 +28,14 @@ class Repository:
         self.path = folder + "/" + self.name
         # TODO(pablogs) ensure that git is installed
         if os.path.exists(self.path):
-            command = f"cd {self.path} && git pull {self.url} {self.branch}"
+            command = f'cd "{self.path}" && git pull {self.url} {self.branch}'
             result = run_cmd(command)
             if 0 != result.returncode:
                 print(f"{self.name} pull failed: \n{result.stderr.decode('utf-8')}")
                 sys.exit(1)
             return
 
-        command = f"git clone -b {self.branch} {self.url} {self.path}"
+        command = f'git clone -b {self.branch} {self.url} "{self.path}"'
         result = run_cmd(command)
 
         if 0 != result.returncode:
