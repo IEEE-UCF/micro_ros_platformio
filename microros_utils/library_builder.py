@@ -107,11 +107,17 @@ class Build:
             # Windows: use Scripts/activate.bat
             activate_script = self.python_env.replace('/bin/activate', '/Scripts/activate.bat')
             source_cmd = f'call "{activate_script}"'
+            generator_flag = '-G Ninja'
         else:
             # Unix/Linux/macOS: use bin/activate with dot-source
             source_cmd = f'. {self.python_env}'
-        
-        command = f'cd "{self.dev_folder}" && {touch_command}{source_cmd} && colcon build --cmake-args -DBUILD_TESTING=OFF -DPython3_EXECUTABLE=`which python`'
+            generator_flag = ''
+
+        # Use the running Python executable instead of shell `which` backticks
+        python_exec = sys.executable
+
+        cmake_args = f"{generator_flag} -DBUILD_TESTING=OFF -DPython3_EXECUTABLE=\"{python_exec}\""
+        command = f'cd "{self.dev_folder}" && {touch_command}{source_cmd} && colcon build --cmake-args {cmake_args}'
         result = run_cmd(command, env=self.env)
 
         if 0 != result.returncode:
@@ -192,12 +198,18 @@ class Build:
             setup_script = f"{self.dev_folder}/install/setup.bat"
             source_cmd = f'call "{activate_script}"'
             dev_source_cmd = f'call "{setup_script}"'
+            generator_flag = '-G Ninja'
         else:
             # Unix/Linux/macOS: use bin/activate and setup.sh with dot-source
             dev_source_cmd = f'. {self.dev_folder}/install/setup.sh'
             source_cmd = f'. {self.python_env}'
-        
-        colcon_command = f'{source_cmd} && colcon build --merge-install --packages-ignore-regex=.*_cpp --metas {common_meta_path} {meta_file} {user_meta} --cmake-args -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=OFF  -DTHIRDPARTY=ON  -DBUILD_SHARED_LIBS=OFF  -DBUILD_TESTING=OFF  -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE={toolchain_file} -DPython3_EXECUTABLE=`which python`'
+            generator_flag = ''
+
+        # Use the running Python executable instead of shell `which` backticks
+        python_exec = sys.executable
+
+        cmake_args = f"{generator_flag} -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=OFF  -DTHIRDPARTY=ON  -DBUILD_SHARED_LIBS=OFF  -DBUILD_TESTING=OFF  -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE={toolchain_file} -DPython3_EXECUTABLE=\"{python_exec}\""
+        colcon_command = f"{source_cmd} && colcon build --merge-install --packages-ignore-regex=.*_cpp --metas {common_meta_path} {meta_file} {user_meta} --cmake-args {cmake_args}"
         command = f'cd "{self.mcu_folder}" && {dev_source_cmd} && {colcon_command}'
         result = run_cmd(command, env=self.env)
 
