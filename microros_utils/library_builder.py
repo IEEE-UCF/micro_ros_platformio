@@ -36,7 +36,20 @@ class Build:
     def __init__(self, library_folder, packages_folder, distro, python_env):
         self.library_folder = library_folder
         self.packages_folder = packages_folder
-        self.build_folder = library_folder + "/build"
+        # Default build folder inside the project
+        default_build = os.path.join(library_folder, "build")
+
+        # On Windows, very long paths (OneDrive + deep nests) can break tools
+        # like ninja and CMake. Use a short temp-based build folder when the
+        # default path is long to avoid "Filename longer than 260 characters".
+        if sys.platform == 'win32' and len(os.path.abspath(default_build)) > 200:
+            temp_base = os.environ.get('TEMP') or os.environ.get('TMP') or 'C:\\tmp'
+            # create a short, per-project unique folder name
+            short_name = 'microros_build_' + hex(abs(hash(os.path.abspath(library_folder))))[2:10]
+            self.build_folder = os.path.join(temp_base, short_name)
+            print(f"Note: using short build folder '{self.build_folder}' to avoid long path issues on Windows")
+        else:
+            self.build_folder = default_build
         self.distro = distro
 
         self.dev_packages = []
