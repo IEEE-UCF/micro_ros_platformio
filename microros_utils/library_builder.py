@@ -102,9 +102,16 @@ class Build:
         if self.distro in ('rolling', 'kilted'):
             touch_command = 'touch src/ament_cmake_ros/rmw_test_fixture_implementation/COLCON_IGNORE && '
         
-        # Use call instead of . for Windows batch script sourcing
-        source_cmd = f'call {self.python_env}' if self.python_env.endswith('.bat') else f'. {self.python_env}'
-        command = f'cd {self.dev_folder} && {touch_command}{source_cmd} && colcon build --cmake-args -DBUILD_TESTING=OFF -DPython3_EXECUTABLE=`which python`'
+        # Determine the correct activation script and syntax for the platform
+        if sys.platform == 'win32':
+            # Windows: use Scripts/activate.bat
+            activate_script = self.python_env.replace('/bin/activate', '/Scripts/activate.bat')
+            source_cmd = f'call "{activate_script}"'
+        else:
+            # Unix/Linux/macOS: use bin/activate with dot-source
+            source_cmd = f'. {self.python_env}'
+        
+        command = f'cd "{self.dev_folder}" && {touch_command}{source_cmd} && colcon build --cmake-args -DBUILD_TESTING=OFF -DPython3_EXECUTABLE=`which python`'
         result = run_cmd(command, env=self.env)
 
         if 0 != result.returncode:
@@ -177,8 +184,21 @@ class Build:
         print("Building micro-ROS library")
 
         common_meta_path = self.library_folder + '/metas/common.meta'
-        colcon_command = '. {} && colcon build --merge-install --packages-ignore-regex=.*_cpp --metas {} {} {} --cmake-args -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=OFF  -DTHIRDPARTY=ON  -DBUILD_SHARED_LIBS=OFF  -DBUILD_TESTING=OFF  -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE={} -DPython3_EXECUTABLE=`which python`'.format(self.python_env, common_meta_path, meta_file, user_meta, toolchain_file)
-        command = "cd {} && . {}/install/setup.sh && {}".format(self.mcu_folder, self.dev_folder, colcon_command)
+        
+        # Determine the correct activation script and syntax for the platform
+        if sys.platform == 'win32':
+            # Windows: use Scripts/activate.bat and setup.bat
+            activate_script = self.python_env.replace('/bin/activate', '/Scripts/activate.bat')
+            setup_script = f"{self.dev_folder}/install/setup.bat"
+            source_cmd = f'call "{activate_script}"'
+            dev_source_cmd = f'call "{setup_script}"'
+        else:
+            # Unix/Linux/macOS: use bin/activate and setup.sh with dot-source
+            dev_source_cmd = f'. {self.dev_folder}/install/setup.sh'
+            source_cmd = f'. {self.python_env}'
+        
+        colcon_command = f'{source_cmd} && colcon build --merge-install --packages-ignore-regex=.*_cpp --metas {common_meta_path} {meta_file} {user_meta} --cmake-args -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=OFF  -DTHIRDPARTY=ON  -DBUILD_SHARED_LIBS=OFF  -DBUILD_TESTING=OFF  -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE={toolchain_file} -DPython3_EXECUTABLE=`which python`'
+        command = f'cd "{self.mcu_folder}" && {dev_source_cmd} && {colcon_command}'
         result = run_cmd(command, env=self.env)
 
         if 0 != result.returncode:
