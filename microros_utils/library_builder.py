@@ -102,7 +102,9 @@ class Build:
         if self.distro in ('rolling', 'kilted'):
             touch_command = 'touch src/ament_cmake_ros/rmw_test_fixture_implementation/COLCON_IGNORE && '
         
-        command = "cd {} && {} . {} && colcon build --cmake-args -DBUILD_TESTING=OFF -DPython3_EXECUTABLE=`which python`".format(self.dev_folder, touch_command, self.python_env)
+        # Use call instead of . for Windows batch script sourcing
+        source_cmd = f'call {self.python_env}' if self.python_env.endswith('.bat') else f'. {self.python_env}'
+        command = f'cd {self.dev_folder} && {touch_command}{source_cmd} && colcon build --cmake-args -DBUILD_TESTING=OFF -DPython3_EXECUTABLE=`which python`'
         result = run_cmd(command, env=self.env)
 
         if 0 != result.returncode:
