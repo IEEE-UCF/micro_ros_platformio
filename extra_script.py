@@ -108,7 +108,46 @@ def build_microros(*args, **kwargs):
         "{} {} -fno-rtti -DCLOCK_MONOTONIC=0 -D'__attribute__(x)='".format(' '.join(env['CXXFLAGS']), ' '.join(env['CCFLAGS']))
     )
 
-    python_env_path = env['PROJECT_CORE_DIR'] + "/penv/bin/activate"
+    # Prefer global PlatformIO venv (~/.platformio/penv) if present, otherwise use project-specific penv
+    global_venv = os.path.expanduser("~/.platformio/penv")
+    project_venv = os.path.join(env['PROJECT_CORE_DIR'], 'penv')
+    chosen_venv = None
+    created_venv = False
+
+    if os.path.exists(global_venv):
+        chosen_venv = global_venv
+        print("Using global PlatformIO venv: {}".format(global_venv))
+    else:
+        chosen_venv = project_venv
+        print("Global PlatformIO venv not found; using project venv: {}".format(project_venv))
+
+    if os.name == 'nt':
+        python_env_path = os.path.join(chosen_venv, 'Scripts', 'activate')
+    else:
+        python_env_path = os.path.join(chosen_venv, 'bin', 'activate')
+
+    # If activate script is missing and we're using the project venv, try to create it
+    if not os.path.exists(python_env_path):
+        if chosen_venv == project_venv:
+            print('Venv not found at {}. Creating virtualenv...'.format(project_venv))
+            try:
+                env.Execute('$PYTHONEXE -m venv {}'.format(project_venv))
+                created_venv = True
+            except Exception:
+                rc = os.system('{} -m venv {}'.format(env['PYTHONEXE'], project_venv))
+                if rc == 0:
+                    created_venv = True
+
+            # Re-evaluate activation script path after attempting create
+            if os.name == 'nt':
+                python_env_path = os.path.join(project_venv, 'Scripts', 'activate')
+            else:
+                python_env_path = os.path.join(project_venv, 'bin', 'activate')
+        else:
+            print('Warning: global venv chosen but activation script missing: {}'.format(python_env_path))
+
+    print('Using activation script: {}'.format(python_env_path))
+
     builder = library_builder.Build(library_folder=main_path, packages_folder=extra_packages_path, distro=microros_distro, python_env=python_env_path)
     builder.run('{}/metas/{}'.format(main_path, selected_board_meta), cmake_toolchain.path, microros_user_meta)
 
