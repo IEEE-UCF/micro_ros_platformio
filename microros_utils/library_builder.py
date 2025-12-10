@@ -142,7 +142,8 @@ class Build:
             generator_flag = ''
 
         # Use the running Python executable instead of shell `which` backticks
-        python_exec = sys.executable
+        # Convert backslashes to forward slashes for CMake compatibility on Windows
+        python_exec = sys.executable.replace('\\', '/')
 
         cmake_args = f"{generator_flag} -DBUILD_TESTING=OFF -DPython3_EXECUTABLE=\"{python_exec}\""
         command = f'cd "{self.dev_folder}" && {touch_command}{source_cmd} && colcon build --cmake-args {cmake_args}'
@@ -234,7 +235,8 @@ class Build:
             generator_flag = ''
 
         # Use the running Python executable instead of shell `which` backticks
-        python_exec = sys.executable
+        # Convert backslashes to forward slashes for CMake compatibility on Windows
+        python_exec = sys.executable.replace('\\', '/')
 
         cmake_args = f"{generator_flag} -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=OFF  -DTHIRDPARTY=ON  -DBUILD_SHARED_LIBS=OFF  -DBUILD_TESTING=OFF  -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE={toolchain_file} -DPython3_EXECUTABLE=\"{python_exec}\""
         colcon_command = f"{source_cmd} && colcon build --merge-install --packages-ignore-regex=.*_cpp --metas {common_meta_path} {meta_file} {user_meta} --cmake-args {cmake_args}"
