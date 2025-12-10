@@ -82,14 +82,11 @@ def build_microros(*args, **kwargs):
     #### Install dependencies ####
     ##############################
 
-    pip_packages = [x.split("==")[0] for x in os.popen('{} -m pip freeze'.format(env['PYTHONEXE'])).read().split('\n')]
-    required_packages = ["catkin-pkg", "lark-parser", "colcon-common-extensions", "importlib-resources", "pyyaml", "pytz", "markupsafe==2.0.1", "empy==3.3.4"]
-    if all([x in pip_packages for x in required_packages]):
-        print("All required Python pip packages are installed")
-
-    for p in [x for x in required_packages if x not in pip_packages]:
-        print('Installing {} with pip at PlatformIO environment'.format(p))
-        env.Execute('$PYTHONEXE -m pip install {}'.format(p))
+    # NOTE: we must install the required pip packages into the Python
+    # executable that will be used by the micro-ROS build (the chosen venv)
+    # because CMake later calls that Python directly (e.g. /.../penv/bin/python).
+    # Compute the chosen venv activation path later, then install into
+    # the venv's python executable below (after venv selection).
 
     import microros_utils.library_builder as library_builder
 
@@ -147,6 +144,28 @@ def build_microros(*args, **kwargs):
             print('Warning: global venv chosen but activation script missing: {}'.format(python_env_path))
 
     print('Using activation script: {}'.format(python_env_path))
+    # Ensure required pip packages are installed into the venv Python that will
+    # actually be used by CMake and micro-ROS tooling. Fall back to
+    # env['PYTHONEXE'] if activation script or chosen_venv isn't available.
+    if chosen_venv:
+        if os.name == 'nt':
+            chosen_python = os.path.join(chosen_venv, 'Scripts', 'python')
+        else:
+            chosen_python = os.path.join(chosen_venv, 'bin', 'python')
+        if not os.path.exists(chosen_python):
+            # If venv python missing, fallback to env Python
+            chosen_python = env['PYTHONEXE']
+    else:
+        chosen_python = env['PYTHONEXE']
+
+    pip_packages = [x.split("==")[0] for x in os.popen('{} -m pip freeze'.format(chosen_python)).read().split('\n')]
+    required_packages = ["catkin-pkg", "lark-parser", "colcon-common-extensions", "importlib-resources", "pyyaml", "pytz", "markupsafe==2.0.1", "empy==3.3.4"]
+    if all([x in pip_packages for x in [p.split('==')[0] for p in required_packages]]):
+        print("All required Python pip packages are installed in {}".format(chosen_python))
+
+    for p in [x for x in required_packages if x.split('==')[0] not in pip_packages]:
+        print('Installing {} with pip at {}'.format(p, chosen_python))
+        env.Execute('{} -m pip install {}'.format(chosen_python, p))
 
     builder = library_builder.Build(library_folder=main_path, packages_folder=extra_packages_path, distro=microros_distro, python_env=python_env_path)
     builder.run('{}/metas/{}'.format(main_path, selected_board_meta), cmake_toolchain.path, microros_user_meta)
