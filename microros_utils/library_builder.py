@@ -23,7 +23,16 @@ set(CMAKE_AR {AR_COMPILER})
 set(CMAKE_C_FLAGS_INIT "{C_FLAGS}" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS_INIT "{CXX_FLAGS}" CACHE STRING "" FORCE)
 
-set(__BIG_ENDIAN__ 0)"""
+set(__BIG_ENDIAN__ 0)
+
+# Workaround: cmake 3.28+ fatals when CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+# because the ABI-detection binary cannot run for bare-metal cross-compilers.
+# Setting these here prevents the fatal error in CMakeCommonCompilerMacros.cmake
+# regardless of cmake version or install path (apt, pip, etc.).
+set(CMAKE_C_STANDARD_COMPUTED_DEFAULT 11)
+set(CMAKE_CXX_STANDARD_COMPUTED_DEFAULT 14)
+set(CMAKE_C_EXTENSIONS_COMPUTED_DEFAULT ON)
+set(CMAKE_CXX_EXTENSIONS_COMPUTED_DEFAULT ON)"""
 
         cmake_toolchain = cmake_toolchain.format(C_COMPILER=cc, CXX_COMPILER=cxx, AR_COMPILER=ar, C_FLAGS=cflags, CXX_FLAGS=cxxflags)
 
