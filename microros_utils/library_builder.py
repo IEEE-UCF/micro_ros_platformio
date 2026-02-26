@@ -30,7 +30,7 @@ set(__BIG_ENDIAN__ 0)
 # Setting these here prevents the fatal error in CMakeCommonCompilerMacros.cmake
 # regardless of cmake version or install path (apt, pip, etc.).
 set(CMAKE_C_STANDARD_COMPUTED_DEFAULT 11)
-set(CMAKE_CXX_STANDARD_COMPUTED_DEFAULT 14)
+set(CMAKE_CXX_STANDARD_COMPUTED_DEFAULT 17)
 set(CMAKE_C_EXTENSIONS_COMPUTED_DEFAULT ON)
 set(CMAKE_CXX_EXTENSIONS_COMPUTED_DEFAULT ON)"""
 
