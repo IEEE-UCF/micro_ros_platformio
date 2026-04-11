@@ -30,7 +30,12 @@ main_path = os.path.realpath(".")
 global_env = DefaultEnvironment()
 board = env['BOARD']
 framework = env['PIOFRAMEWORK'][0]
-extra_packages_path = "{}/extra_packages".format(env['PROJECT_DIR'])
+_extra_packages_override = global_env.BoardConfig().get("microros_extra_packages", "")
+extra_packages_path = (
+    os.path.realpath(os.path.join(env['PROJECT_DIR'], _extra_packages_override))
+    if _extra_packages_override
+    else "{}/extra_packages".format(env['PROJECT_DIR'])
+)
 
 selected_board_meta = boards_metas[board] if board in boards_metas else "colcon.meta"
 
